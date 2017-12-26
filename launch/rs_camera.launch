@@ -37,7 +37,7 @@
   <arg name="gyro_fps"            default="1000" />
   <arg name="accel_fps"           default="1000" />
   <arg name="enable_imu"          default="true" />
-  <arg name="serial"              default="728612070682" />
+  <arg name="serial"              default="0" />
 
   <arg name="enable_pointcloud"   default="false" />
   <arg name="enable_sync"         default="false" />

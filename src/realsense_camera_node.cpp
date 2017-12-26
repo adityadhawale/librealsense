@@ -220,18 +220,21 @@ namespace realsense_ros_camera
 
                 if (_serial_no.size() != 0)
                 {
-                    for (uint i = 0; i < list.size(); i++)
-                    {
+                  std::stringstream ss(_serial_no);
+                  int x = 0;
+                  ss >> x;
+                  _dev = list[x];
+                    //for (uint i = 0; i < list.size(); i++)
+                    //{
                         rs2::device temp_dev;
-
-                        temp_dev = list[i];
-                        std::string new_serial_no = temp_dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER);
-                        if (new_serial_no == _serial_no)
-                        {
-                            _dev = temp_dev;
-                            break;
-                        }
-                    }
+                                               // temp_dev = list[i];
+                       // std::string new_serial_no = temp_dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER);
+                       // if (new_serial_no == _serial_no)
+                       // {
+                       //     _dev = temp_dev;
+                       //     break;
+                       // }
+                    //}
 
                 }
                 else

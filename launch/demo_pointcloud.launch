@@ -1,7 +1,7 @@
 <launch>
   <arg name="manager" default="realsense_ros_camera_manager"/>
   <arg name="camera" default="camera" />
-  <arg name="serial" default="728612070682" />
+  <arg name="serial" default="0" />
 
   <include file="$(find realsense_ros_camera)/launch/rs_camera.launch">
     <arg name="manager"           value="$(arg manager)"/>
