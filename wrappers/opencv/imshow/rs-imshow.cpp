@@ -15,7 +15,7 @@ int main(int argc, char * argv[]) try
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
     rs2::config c;
-    c.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_YUYV, 30);
+    c.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_BGR8, 30);
     c.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 30);
     std::string serial_number(dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
 //    c.enable_device(serial_number);
