@@ -41,11 +41,11 @@ int main(int argc, char * argv[]) try
 
         // Create OpenCV matrix of size (w,h) from the colorized depth data
         Mat image(Size(w, h), CV_8UC3, (void*)depth.get_data(), Mat::AUTO_STEP);
-//	Mat image_color(Size(640, 480), CV_8UC3, (void*)rgb.get_data(), Mat::AUTO_STEP);
+	Mat image_color(Size(640, 480), CV_8UC3, (void*)rgb.get_data(), Mat::AUTO_STEP);
 
         // Update the window with new data
         imshow(window_name, image);
-//	imshow("rgb display", image_color);
+	imshow("rgb display", image_color);
     }
 
     return EXIT_SUCCESS;
