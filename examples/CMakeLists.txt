@@ -17,13 +17,14 @@ elseif(COMPILER_SUPPORTS_CXX0X)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 endif()
 
+find_package(OpenCV REQUIRED)
 if(BUILD_GRAPHICAL_EXAMPLES)
     find_package(OpenGL)
     if(NOT OPENGL_FOUND)
         message(FATAL_ERROR "\n\n OpenGL package is missing!\n\n")
     endif()
 
-    set(DEPENDENCIES realsense2 ${OPENGL_LIBRARIES})
+    set(DEPENDENCIES realsense2 ${OPENGL_LIBRARIES} ${OpenCV_LIBS} ${OpenCV_LIBRARIES})
 
     if(WIN32)
         list(APPEND DEPENDENCIES glfw3)

@@ -2,10 +2,12 @@
 cmake_minimum_required(VERSION 3.1.0)
 
 project(RealsenseExamples-Color)
+find_package(OpenCV REQUIRED)
 
 # Save the command line compile commands in the build output
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-
+include(CheckCXXCompilerFlag)
+set(DEPENDENCIES realsense2 ${OpenCV_LIBS} ${OpenCV_LIBRARIES})
 add_executable(rs-color rs-color.c ../example.h)
 target_link_libraries(rs-color ${DEPENDENCIES})
 set_target_properties (rs-color PROPERTIES

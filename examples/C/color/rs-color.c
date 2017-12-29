@@ -5,12 +5,10 @@
 #include <librealsense2/rs.h>
 #include <librealsense2/h/rs_pipeline.h>
 #include <librealsense2/h/rs_frame.h>
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include "../example.h"
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                     These parameters are reconfigurable                                        //
