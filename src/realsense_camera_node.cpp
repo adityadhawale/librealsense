@@ -1001,39 +1001,10 @@ namespace realsense_ros_camera
             auto color_intrinsics = _stream_intrinsics[COLOR];
             auto image_depth16 = reinterpret_cast<const uint16_t*>(_image[DEPTH].data);
             auto depth_intrinsics = _stream_intrinsics[DEPTH];
-            sensor_msgs::Image msg_image;
-            msg_image.header.stamp = t;
-            msg_image.header.frame_id = _optical_frame_id[DEPTH];
-            msg_image.width = depth_intrinsics.width;
-            msg_image.height = depth_intrinsics.height;
 
             cv::Mat float_image = cv::Mat(depth_intrinsics.height, depth_intrinsics.width, CV_32FC1, cvScalar(0.));
 
             float depth_point[3], color_point[3], color_pixel[2], scaled_depth;
-            unsigned char* color_data = _image[COLOR].data;
-
-            sensor_msgs::PointCloud2 msg_pointcloud;
-            msg_pointcloud.header.stamp = t;
-            msg_pointcloud.header.frame_id = _optical_frame_id[DEPTH];
-            msg_pointcloud.width = depth_intrinsics.width;
-            msg_pointcloud.height = depth_intrinsics.height;
-            msg_pointcloud.is_dense = true;
-            sensor_msgs::PointCloud2Modifier modifier(msg_pointcloud);
-            modifier.setPointCloud2Fields(4,
-                                          "x", 1, sensor_msgs::PointField::FLOAT32,
-                                          "y", 1, sensor_msgs::PointField::FLOAT32,
-                                          "z", 1, sensor_msgs::PointField::FLOAT32,
-                                          "rgb", 1, sensor_msgs::PointField::FLOAT32);
-            modifier.setPointCloud2FieldsByString(2, "xyz", "rgb");
-
-
-            sensor_msgs::PointCloud2Iterator<float>iter_x(msg_pointcloud, "x");
-            sensor_msgs::PointCloud2Iterator<float>iter_y(msg_pointcloud, "y");
-            sensor_msgs::PointCloud2Iterator<float>iter_z(msg_pointcloud, "z");
-
-            sensor_msgs::PointCloud2Iterator<uint8_t>iter_r(msg_pointcloud, "r");
-            sensor_msgs::PointCloud2Iterator<uint8_t>iter_g(msg_pointcloud, "g");
-            sensor_msgs::PointCloud2Iterator<uint8_t>iter_b(msg_pointcloud, "b");
 
             // Fill the PointCloud2 fields
             for (int y = 0; y < depth_intrinsics.height; ++y)
@@ -1050,44 +1021,26 @@ namespace realsense_ros_camera
                         depth_point[1] = 0.f;
                         depth_point[2] = 0.f;
                     }
-
-                    *iter_x = depth_point[0];
-                    *iter_y = depth_point[1];
-                    *iter_z = depth_point[2];
-
                     rs2_transform_point_to_point(color_point, &_depth2color_extrinsics, depth_point);
                     rs2_project_point_to_pixel(color_pixel, &color_intrinsics, color_point);
 
-                    if (color_pixel[1] < 0.f || color_pixel[1] > color_intrinsics.height
-                        || color_pixel[0] < 0.f || color_pixel[0] > color_intrinsics.width)
-                    {
-                        // For out of bounds color data, default to a shade of blue in order to visually distinguish holes.
-                        // This color value is same as the librealsense out of bounds color value.
-                        *iter_r = static_cast<uint8_t>(96);
-                        *iter_g = static_cast<uint8_t>(157);
-                        *iter_b = static_cast<uint8_t>(198);
-                    }
-                    else
+                    if (color_pixel[1] >= 0.f && color_pixel[1] < color_intrinsics.height
+                        && color_pixel[0] <= 0.f && color_pixel[0] < color_intrinsics.width)
                     {
                         auto i = static_cast<int>(color_pixel[0]);
                         auto j = static_cast<int>(color_pixel[1]);
         
                         float_image.at<float>(j, i) = color_point[2];
-        
-                        auto offset = i * 3 + j * color_intrinsics.width * 3;
-                        *iter_r = static_cast<uint8_t>(color_data[offset]);
-                        *iter_g = static_cast<uint8_t>(color_data[offset + 1]);
-                        *iter_b = static_cast<uint8_t>(color_data[offset + 2]);
                     }
-    
-
                     ++image_depth16;
-                    ++iter_x; ++iter_y; ++iter_z;
-                    ++iter_r; ++iter_g; ++iter_b;
                 }
             }
             sensor_msgs::ImagePtr img;
             img = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::TYPE_32FC1, float_image).toImageMsg();
+            img->header.stamp = t;
+            img->header.frame_id = _optical_frame_id[COLOR];
+            img->width = depth_intrinsics.width;
+            img->height = depth_intrinsics.height;
             _float_image_publisher.publish(img);
 
         }
