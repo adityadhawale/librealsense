@@ -1021,11 +1021,12 @@ namespace realsense_ros_camera
                         depth_point[1] = 0.f;
                         depth_point[2] = 0.f;
                     }
+
                     rs2_transform_point_to_point(color_point, &_depth2color_extrinsics, depth_point);
                     rs2_project_point_to_pixel(color_pixel, &color_intrinsics, color_point);
 
                     if (color_pixel[1] >= 0.f && color_pixel[1] < color_intrinsics.height
-                        && color_pixel[0] <= 0.f && color_pixel[0] < color_intrinsics.width)
+                        && color_pixel[0] >= 0.f && color_pixel[0] < color_intrinsics.width)
                     {
                         auto i = static_cast<int>(color_pixel[0]);
                         auto j = static_cast<int>(color_pixel[1]);
@@ -1039,8 +1040,6 @@ namespace realsense_ros_camera
             img = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::TYPE_32FC1, float_image).toImageMsg();
             img->header.stamp = t;
             img->header.frame_id = _optical_frame_id[COLOR];
-            img->width = depth_intrinsics.width;
-            img->height = depth_intrinsics.height;
             _float_image_publisher.publish(img);
 
         }

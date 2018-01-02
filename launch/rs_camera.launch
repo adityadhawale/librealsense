@@ -98,4 +98,14 @@
     <remap from="camera/infra2/image_raw" to="/$(arg camera)/infra2/image_raw" />
     <remap from="camera/points"          to="/$(arg camera)/points" />
   </node>
+
+
+  <!-- Convert it into a point cloud -->
+  <node pkg="nodelet" type="nodelet" name="cloudify" args="load depth_image_proc/point_cloud_xyzrgb $(arg manager) --no-bond">
+    <remap from="depth_registered/image_rect" to="/camera/depth/image_rect"/>
+    <remap from="depth_registered/points" to="/camera/depth/points_rectified"/>
+    <remap from="rgb/image_rect_color" to="/camera/color/image_raw"/>
+    <remap from="rgb/camera_info" to="/camera/color/camera_info"/>
+  </node>
+
 </launch>
