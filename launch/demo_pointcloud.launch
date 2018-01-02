@@ -13,9 +13,10 @@
     <arg name="color_height"      value="480"/>
     <arg name="color_fps"         value="30"/>
     <arg name="enable_depth"      value="true"/>
+    <arg name="float_depth_image" value="true"/>
     <arg name="enable_color"      value="true"/>
-    <arg name="enable_infra1"     value="false"/>
-    <arg name="enable_infra2"     value="false"/>
+    <arg name="enable_infra1"     value="true"/>
+    <arg name="enable_infra2"     value="true"/>
     <arg name="enable_fisheye"    value="false"/>
     <arg name="enable_imu"        value="false"/>
     <arg name="enable_pointcloud" value="true"/>
@@ -24,5 +25,5 @@
     <remap from="camera/points" to="$(arg camera)/points" />
   </include>
 
-  <node name="rviz_$(arg camera)" pkg="rviz" type="rviz" args="-d $(find realsense_ros_camera)/rviz/pointcloud.rviz" required="true" />
+  <!--node name="rviz_$(arg camera)" pkg="rviz" type="rviz" args="-d $(find realsense_ros_camera)/rviz/pointcloud.rviz" required="true" /-->
 </launch>

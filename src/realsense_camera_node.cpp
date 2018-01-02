@@ -40,9 +40,7 @@ namespace realsense_ros_camera
     const stream_index_pair GYRO{RS2_STREAM_GYRO, 0};
     const stream_index_pair ACCEL{RS2_STREAM_ACCEL, 0};
 
-    const std::vector<std::vector<stream_index_pair>> IMAGE_STREAMS = {{{DEPTH, INFRA1, INFRA2},
-                                                                        {COLOR},
-                                                                        {FISHEYE}}};
+    const std::vector<std::vector<stream_index_pair>> IMAGE_STREAMS = {{{DEPTH, INFRA1, INFRA2}, {COLOR}, {FISHEYE}}};
 
     const std::vector<std::vector<stream_index_pair>> HID_STREAMS = {{GYRO, ACCEL}};
 
@@ -141,17 +139,23 @@ namespace realsense_ros_camera
 
             _pnh = getPrivateNodeHandle();
 
-            _pnh.param("enable_pointcloud", _pointcloud, POINTCLOUD);
-            _pnh.param("enable_sync", _sync_frames, SYNC_FRAMES);
-            if (_pointcloud)
-                _sync_frames = true;
-
             _pnh.param("serial_no", _serial_no);
+            _pnh.param("float_depth_image", _float_depth_image);
 
             if(_pnh.hasParam("serial_no"))
             {
-                _pnh.getParam("serial_no", _serial_no);
+              _pnh.getParam("serial_no", _serial_no);
             }
+            if(_pnh.hasParam("float_depth_image"))
+            {
+              _pnh.getParam("float_depth_image", _float_depth_image);
+            }
+
+            _pnh.param("enable_pointcloud", _pointcloud, POINTCLOUD);
+            _pnh.param("enable_sync", _sync_frames, SYNC_FRAMES);
+
+            if (_pointcloud || _float_depth_image)
+                _sync_frames = true;
 
             _pnh.param("depth_width", _width[DEPTH], DEPTH_WIDTH);
             _pnh.param("depth_height", _height[DEPTH], DEPTH_HEIGHT);
@@ -340,6 +344,11 @@ namespace realsense_ros_camera
             if (true == _enable[DEPTH])
             {
                 _image_publishers[DEPTH] = image_transport.advertise("camera/depth/image_raw", 1);
+
+                if(_float_depth_image)
+                {
+                  _float_image_publisher = image_transport.advertise("camera/depth/image_rect", 1);  
+                }                
                 _info_publisher[DEPTH] = getNodeHandle().advertise<sensor_msgs::CameraInfo>("camera/depth/camera_info", 1);
 
                 if (_pointcloud)
@@ -495,6 +504,11 @@ namespace realsense_ros_camera
                     {
                         ROS_DEBUG("publishPCTopic(...)");
                         publishPCTopic(t);
+                    }
+                    if(_float_depth_image && is_depth_frame_arrived)
+                    {
+                      ROS_DEBUG("publishFloatDepthImage(...)");
+                      publishFloatDepthImage(t);
                     }
                 };
 
@@ -982,6 +996,90 @@ namespace realsense_ros_camera
             _pointcloud_publisher.publish(msg_pointcloud);
         }
 
+        void publishFloatDepthImage(const ros::Time& t)
+        {
+            auto color_intrinsics = _stream_intrinsics[COLOR];
+            auto image_depth16 = reinterpret_cast<const uint16_t*>(_image[DEPTH].data);
+            auto depth_intrinsics = _stream_intrinsics[DEPTH];
+            sensor_msgs::Image msg_image;
+            msg_image.header.stamp = t;
+            msg_image.header.frame_id = _optical_frame_id[DEPTH];
+            msg_image.width = depth_intrinsics.width;
+            msg_image.height = depth_intrinsics.height;
+
+            cv::Mat float_image = cv::Mat(depth_intrinsics.height, depth_intrinsics.width, CV_32FC1, cvScalar(0.));
+
+            float depth_point[3], color_point[3], color_pixel[2], scaled_depth;
+            unsigned char* color_data = _image[COLOR].data;
+
+            sensor_msgs::PointCloud2Modifier modifier(msg_pointcloud);
+
+            modifier.setPointCloud2Fields(4,
+                                          "x", 1, sensor_msgs::PointField::FLOAT32,
+                                          "y", 1, sensor_msgs::PointField::FLOAT32,
+                                          "z", 1, sensor_msgs::PointField::FLOAT32,
+                                          "rgb", 1, sensor_msgs::PointField::FLOAT32);
+            modifier.setPointCloud2FieldsByString(2, "xyz", "rgb");
+
+            sensor_msgs::PointCloud2Iterator<float>iter_x(msg_pointcloud, "x");
+            sensor_msgs::PointCloud2Iterator<float>iter_y(msg_pointcloud, "y");
+            sensor_msgs::PointCloud2Iterator<float>iter_z(msg_pointcloud, "z");
+
+            sensor_msgs::PointCloud2Iterator<uint8_t>iter_r(msg_pointcloud, "r");
+            sensor_msgs::PointCloud2Iterator<uint8_t>iter_g(msg_pointcloud, "g");
+            sensor_msgs::PointCloud2Iterator<uint8_t>iter_b(msg_pointcloud, "b");
+
+            // Fill the PointCloud2 fields
+            for (int y = 0; y < depth_intrinsics.height; ++y)
+            {
+                for (int x = 0; x < depth_intrinsics.width; ++x)
+                {
+                    scaled_depth = static_cast<float>(*image_depth16) * _depth_scale_meters;
+                    float depth_pixel[2] = {static_cast<float>(x), static_cast<float>(y)};
+                    rs2_deproject_pixel_to_point(depth_point, &depth_intrinsics, depth_pixel, scaled_depth);
+
+                    if (depth_point[2] <= 0.f || depth_point[2] > 5.f)
+                    {
+                        depth_point[0] = 0.f;
+                        depth_point[1] = 0.f;
+                        depth_point[2] = 0.f;
+                    }
+
+                    *iter_x = depth_point[0];
+                    *iter_y = depth_point[1];
+                    *iter_z = depth_point[2];
+
+                    rs2_transform_point_to_point(color_point, &_depth2color_extrinsics, depth_point);
+                    rs2_project_point_to_pixel(color_pixel, &color_intrinsics, color_point);
+
+                    if (color_pixel[1] < 0.f || color_pixel[1] > color_intrinsics.height
+                        || color_pixel[0] < 0.f || color_pixel[0] > color_intrinsics.width)
+                    {
+                        // For out of bounds color data, default to a shade of blue in order to visually distinguish holes.
+                        // This color value is same as the librealsense out of bounds color value.
+                        *iter_r = static_cast<uint8_t>(96);
+                        *iter_g = static_cast<uint8_t>(157);
+                        *iter_b = static_cast<uint8_t>(198);
+                    }
+                    else
+                    {
+                        auto i = static_cast<int>(color_pixel[0]);
+                        auto j = static_cast<int>(color_pixel[1]);
+                        float_image.at<float>(j, i) = color_point[2];
+                        auto offset = i * 3 + j * color_intrinsics.width * 3;
+                        *iter_r = static_cast<uint8_t>(color_data[offset]);
+                        *iter_g = static_cast<uint8_t>(color_data[offset + 1]);
+                        *iter_b = static_cast<uint8_t>(color_data[offset + 2]);
+                    }
+
+                    ++image_depth16;
+                    ++iter_x; ++iter_y; ++iter_z;
+                    ++iter_r; ++iter_g; ++iter_b;
+                }
+            }
+            _pointcloud_publisher.publish(msg_pointcloud);
+        }
+
         Extrinsics rsExtrinsicsToMsg(const rs2_extrinsics& extrinsics) const
         {
             Extrinsics extrinsicsMsg;
@@ -1106,6 +1204,10 @@ namespace realsense_ros_camera
                 cam_info.header.seq = _seq[stream];
                 info_publisher.publish(cam_info);
 
+                if (stream == DEPTH)
+                {
+                  _float_image_publisher.publish(img);  
+                }
                 image_publisher.publish(img);
                 ROS_DEBUG("%s stream published", rs2_stream_to_string(f.get_profile().stream_type()));
             }
@@ -1132,6 +1234,7 @@ namespace realsense_ros_camera
         std::map<stream_index_pair, std::unique_ptr<rs2::sensor>> _sensors;
 
         std::string _serial_no;
+        bool _float_depth_image;
         float _depth_scale_meters;
 
         std::map<stream_index_pair, rs2_intrinsics> _stream_intrinsics;
@@ -1143,6 +1246,7 @@ namespace realsense_ros_camera
         tf2_ros::StaticTransformBroadcaster _static_tf_broadcaster;
 
         std::map<stream_index_pair, image_transport::Publisher> _image_publishers;
+        image_transport::Publisher _float_image_publisher;
         std::map<stream_index_pair, ros::Publisher> _imu_publishers;
         std::map<stream_index_pair, int> _image_format;
         std::map<stream_index_pair, rs2_format> _format;

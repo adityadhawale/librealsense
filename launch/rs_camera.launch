@@ -16,6 +16,7 @@
   <arg name="depth_width"         default="640" />
   <arg name="depth_height"        default="480" />
   <arg name="enable_depth"        default="true" />
+  <arg name="float_depth_image"   default="true" />
 
   <arg name="infra1_width"        default="640" />
   <arg name="infra1_height"       default="480" />
@@ -55,6 +56,7 @@
     <param name="depth_width"              type="int"  value="$(arg depth_width)" />
     <param name="depth_height"             type="int"  value="$(arg depth_height)" />
     <param name="enable_depth"             type="bool" value="$(arg enable_depth)" />
+    <param name="float_depth_image"        type="bool" value="$(arg float_depth_image)" />
 
     <param name="color_width"              type="int"  value="$(arg color_width)" />
     <param name="color_height"             type="int"  value="$(arg color_height)" />
