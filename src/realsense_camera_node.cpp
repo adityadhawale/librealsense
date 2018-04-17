@@ -1083,28 +1083,28 @@ namespace realsense_ros_camera
         IMUInfo getImuInfo(const stream_index_pair& stream_index)
         {
             IMUInfo info{};
-            auto imuIntrinsics = _sensors[stream_index]->get_motion_intrinsics(stream_index.first);
-            if (GYRO == stream_index)
-            {
-                info.header.frame_id = "imu_gyro";
-            }
-            else if (ACCEL == stream_index)
-            {
-                info.header.frame_id = "imu_accel";
-            }
+           // auto imuIntrinsics = _sensors[stream_index]->get_motion_intrinsics(stream_index.first);
+           // if (GYRO == stream_index)
+           // {
+           //     info.header.frame_id = "imu_gyro";
+           // }
+           // else if (ACCEL == stream_index)
+           // {
+           //     info.header.frame_id = "imu_accel";
+           // }
 
-            auto index = 0;
-            for (int i = 0; i < 3; ++i)
-            {
-                for (int j = 0; j < 4; ++j)
-                {
-                    info.data[index] = imuIntrinsics.data[i][j];
-                    ++index;
-                }
-                info.noise_variances[i] =  imuIntrinsics.noise_variances[i];
-                info.bias_variances[i] = imuIntrinsics.bias_variances[i];
-            }
-            return info;
+           // auto index = 0;
+           // for (int i = 0; i < 3; ++i)
+           // {
+           //     for (int j = 0; j < 4; ++j)
+           //     {
+           //         info.data[index] = imuIntrinsics.data[i][j];
+           //         ++index;
+           //     }
+           //     info.noise_variances[i] =  imuIntrinsics.noise_variances[i];
+           //     info.bias_variances[i] = imuIntrinsics.bias_variances[i];
+           // }
+           // return info;
         }
 
         void tryGetLogSeverity(rs2_log_severity& severity) const
